@@ -5,11 +5,13 @@ services:
     image: neo4j:5.26.15-community-bullseye
     container_name: my_neo4j
     ports:
-      - 7474:7474
-      - 7687:7687
+      - 7474:7474 # ブラウザ経由でhttp://localhost:7474でアクセスするとNeo4jのコンソールにアクセスできる
+      - 7687:7687 # プログラム経由でNeo4jにアクセスするためのポート
     volumes:
       - neo4j_data:/data
       - neo4j_logs:/logs
+    environment:
+      - NEO4J_AUTH=neo4j/neo4jpassword
     networks:
       - mynetwork
 
