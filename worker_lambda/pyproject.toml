@@ -1,0 +1,19 @@
+[project]
+name = "worker-lambda"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.120.4",
+    "neo4j>=6.0.2",
+    "uvicorn>=0.38.0",
+]
+
+[tool.pyright]
+typeCheckingMode = "basic"
+include = ["main.py"]
+exclude = ["**/__pycache__", ".venv"]
+
+[tool.pylance]
+typeCheckingMode = "basic"

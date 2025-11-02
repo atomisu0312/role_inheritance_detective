@@ -1,0 +1,8 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/worker_lambda/.venv/bin/python",
+  "python.pythonPath": "${workspaceFolder}/worker_lambda/.venv/bin/python",
+  "vsintellicode.modify.editor.suggestSelection": "disabled",
+  "vsintellicode.python.completionsEnabled": false,
+  "python.languageServer": "None"
+}
+
