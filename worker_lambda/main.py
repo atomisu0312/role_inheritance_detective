@@ -4,8 +4,14 @@ from neo4j.exceptions import ServiceUnavailable, ClientError
 from fastapi.templating import Jinja2Templates
 import os
 import logging
+import pandas as pd
+import asyncio
 
 app = FastAPI()
+
+# 排他制御用のフラグとロック
+init_in_progress = False
+init_lock = asyncio.Lock()
 
 # ログ設定
 logging.basicConfig(
@@ -21,6 +27,10 @@ templates = Jinja2Templates(directory=TEMPLATE_DIR)
 URI = os.getenv("NEO4J_URI", "neo4j://localhost:7687")
 AUTH = (os.getenv("NEO4J_USER", "neo4j"), os.getenv("NEO4J_PASSWORD", "neo4jpassword"))
 
+DATABASE = "neo4j"
+STATIC_CSV_DIR = os.getenv("STATIC_CSV_DIR", "../target_dir")
+
+df_relation = pd.read_csv(STATIC_CSV_DIR + "/relation.csv")
 
 @app.get("/")
 async def root() -> dict:
@@ -65,3 +75,34 @@ async def test(request: Request) -> dict:
     logger.info(f"Rendered template: {rendered_text}")
 
     return {"message": "Template rendered", "rendered_text": rendered_text}
+
+@app.post("/init")
+async def init(request: Request) -> dict:
+    """Neo4jのノードを初期化するAPI（同時実行を防止）"""
+    global init_in_progress
+    
+    # 既に実行中なら即座にエラーを返す
+    async with init_lock:
+        if init_in_progress:
+            raise HTTPException(
+                status_code=409,
+                detail="Initialization is already in progress. Please wait for the current operation to complete."
+            )
+        init_in_progress = True
+    
+    try:
+        # 同期処理を別スレッドで実行
+        def do_init():
+            with GraphDatabase.driver(URI, auth=AUTH) as driver:
+                with driver.session(database=DATABASE) as session:
+                    session.run("MATCH (n) DETACH DELETE n")
+                    logger.info("Cleared existing nodes.")
+                    for index, row in df_relation.iterrows():
+                        session.run("CREATE (n:Node {name: $name})", name=row["node"])
+                        logger.info(f"Created node: {row['node']}")
+        
+        await asyncio.to_thread(do_init)
+        return {"message": "Initialized successfully"}
+    finally:
+        async with init_lock:
+            init_in_progress = False

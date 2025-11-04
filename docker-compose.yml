@@ -5,8 +5,8 @@ services:
     image: neo4j:5.26.15-community-bullseye
     container_name: my_neo4j
     ports:
-      - 7474:7474 # ブラウザ経由でhttp://localhost:7474でアクセスするとNeo4jのコンソールにアクセスできる
-      - 7687:7687 # プログラム経由でNeo4jにアクセスするためのポート
+      - 7474:7474 # ブラウザ経由 password: neo4jpassword, user: neo4j
+      - 7687:7687 # プログラム経由
     volumes:
       - neo4j_data:/data
       - neo4j_logs:/logs
@@ -14,7 +14,7 @@ services:
       - NEO4J_AUTH=neo4j/neo4jpassword
     networks:
       - mynetwork
-  worker-lambda:
+  worker-lambda: # Neo4Jノードを制御するAPI
     build:
       context: ./worker_lambda
     container_name: worker-lambda
@@ -22,10 +22,31 @@ services:
       - NEO4J_URI=neo4j://neo4j:7687
       - NEO4J_USER=neo4j
       - NEO4J_PASSWORD=neo4jpassword
+      - STATIC_CSV_DIR=./static/target
     ports:
       - 10000:8080
+    volumes:
+      - ./target_dir:/app/static/target
     networks:
       - mynetwork
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  init-task: # Neo4jノードの初期化を行うだけのタスク
+    image: curlimages/curl:8.8.0
+    container_name: init-task
+    networks:
+      - mynetwork
+    depends_on:
+      worker-lambda:
+        condition: service_healthy
+    command: >
+      sh -c "
+        curl -f http://worker-lambda:8080/ &&
+        curl -f -X POST http://worker-lambda:8080/init
+      "
 networks:
   mynetwork:
     driver: bridge

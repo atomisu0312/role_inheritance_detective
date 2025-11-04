@@ -14,6 +14,9 @@ RUN uv sync --frozen --no-dev
 # Production stage
 FROM base AS prod
 
+# Install curl for healthcheck
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Copy Python packages from virtual environment
 COPY --from=builder /app/.venv/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 
