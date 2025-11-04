@@ -73,7 +73,7 @@ async function getCodeReview(): Promise<void> {
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: 'gpt-5-nano',
+          model: 'gpt-5-mini',
           messages: [
             {
               role: 'system',
