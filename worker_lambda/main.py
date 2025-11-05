@@ -105,10 +105,13 @@ async def init(request: Request) -> dict:
         # 別スレッドに処理を移管
         def do_init():
             rows = read_relation_csv(STATIC_CSV_DIR)
+            params_for_apoc = [{"name": row["node"]} for row in rows]
+            init_query = templates.env.get_template("init.cipher").render()
+            
             with GraphDatabase.driver(URI, auth=AUTH) as driver:
                 with driver.session(database=DATABASE) as session:
-                    # クエリの詳細はテンプレートに記述
-                    session.run(templates.env.get_template("init.cipher.j2").render(test_csv_rows = rows))
+                    logger.info(f"query: {init_query}")
+                    session.run(init_query, {"csv_params": params_for_apoc})
                     logger.info("Initialized successfully")
         await asyncio.to_thread(do_init)
     except Exception as e:

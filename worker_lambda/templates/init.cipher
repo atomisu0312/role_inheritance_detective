@@ -1,0 +1,7 @@
+CALL apoc.cypher.runMany(
+'
+    MATCH (n) DETACH DELETE n;
+    CALL apoc.create.nodes(["Node"], $properties);
+'
+,{properties: $csv_params}
+)
