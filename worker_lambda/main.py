@@ -102,19 +102,22 @@ async def init(request: Request) -> dict:
         init_in_progress = True
     
     try:
-        # 同期処理を別スレッドで実行
+        # 別スレッドに処理を移管
         def do_init():
             rows = read_relation_csv(STATIC_CSV_DIR)
+            params_for_apoc = [{"name": row["node"]} for row in rows]
+            init_query = templates.env.get_template("init.cipher").render()
+            
             with GraphDatabase.driver(URI, auth=AUTH) as driver:
                 with driver.session(database=DATABASE) as session:
-                    session.run("MATCH (n) DETACH DELETE n")
-                    logger.info("Cleared existing nodes.")
-                    for row in rows:
-                        session.run("CREATE (n:Node {name: $name})", name=row["node"])
-                        logger.info(f"Created node: {row['node']}")
-        
+                    logger.info(f"query: {init_query}")
+                    session.run(init_query, {"csv_params": params_for_apoc})
+                    logger.info("Initialized successfully")
         await asyncio.to_thread(do_init)
-        return {"message": "Initialized successfully"}
+    except Exception as e:
+        logger.error(f"Error initializing Neo4j: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         async with init_lock:
             init_in_progress = False
+    return {"message": "Initialized successfully"}
