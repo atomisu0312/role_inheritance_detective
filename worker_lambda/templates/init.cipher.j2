@@ -1,9 +1,0 @@
-CALL apoc.cypher.runMany(
-'
-    MATCH (n) DETACH DELETE n;
-    {% for row in test_csv_rows %}
-    CREATE (n:Node {name: \"{{ row["node"] }}\"});
-    {% endfor %}
-'
-,{}
-)
