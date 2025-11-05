@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eCu
+set -euo pipefail
 
 PORT=10001
 
