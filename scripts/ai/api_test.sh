@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # 環境変数の設定
 OPENAI_API_KEY="${OPENAI_API_KEY:-your-api-key-here}"
