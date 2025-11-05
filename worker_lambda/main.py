@@ -4,9 +4,9 @@ from neo4j.exceptions import ServiceUnavailable, ClientError
 from fastapi.templating import Jinja2Templates
 import os
 import logging
-import pandas as pd
 import asyncio
-
+import csv
+from pathlib import Path
 app = FastAPI()
 
 # 排他制御用のフラグとロック
@@ -29,8 +29,6 @@ AUTH = (os.getenv("NEO4J_USER", "neo4j"), os.getenv("NEO4J_PASSWORD", "neo4jpass
 
 DATABASE = "neo4j"
 STATIC_CSV_DIR = os.getenv("STATIC_CSV_DIR", "../target_dir")
-
-df_relation = pd.read_csv(STATIC_CSV_DIR + "/relation.csv")
 
 @app.get("/")
 async def root() -> dict:
@@ -76,6 +74,19 @@ async def test(request: Request) -> dict:
 
     return {"message": "Template rendered", "rendered_text": rendered_text}
 
+# ヘルパー：CSV を遅延読み込みしてジェネレータで返す
+def read_relation_csv(csv_dir: str):
+    p = Path(csv_dir) / "relation.csv"
+    if not p.exists():
+        raise FileNotFoundError(f"relation.csv not found at {p}")
+    with p.open(newline='', encoding='utf-8') as fh:
+        reader = csv.DictReader(fh)
+        # 必要なカラムチェック（例: 'node' カラム）
+        if 'node' not in reader.fieldnames:
+            raise ValueError("relation.csv must contain 'node' column")
+        for row in reader:
+            yield row
+
 @app.post("/init")
 async def init(request: Request) -> dict:
     """Neo4jのノードを初期化するAPI（同時実行を防止）"""
@@ -93,11 +104,12 @@ async def init(request: Request) -> dict:
     try:
         # 同期処理を別スレッドで実行
         def do_init():
+            rows = read_relation_csv(STATIC_CSV_DIR)
             with GraphDatabase.driver(URI, auth=AUTH) as driver:
                 with driver.session(database=DATABASE) as session:
                     session.run("MATCH (n) DETACH DELETE n")
                     logger.info("Cleared existing nodes.")
-                    for index, row in df_relation.iterrows():
+                    for row in rows:
                         session.run("CREATE (n:Node {name: $name})", name=row["node"])
                         logger.info(f"Created node: {row['node']}")
         
