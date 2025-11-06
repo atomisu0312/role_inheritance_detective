@@ -11,8 +11,7 @@ FROM base AS builder
 COPY pyproject.toml uv.lock ./
 # パッケージ構造をコピー（setuptoolsがパッケージを認識するために必要）
 COPY __init__.py ./
-COPY usecase/ ./usecase/
-COPY config/ ./config/
+COPY . .
 RUN uv sync --frozen --no-dev
 
 # Production stage
