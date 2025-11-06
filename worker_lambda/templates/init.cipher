@@ -8,7 +8,8 @@ CREATE CONSTRAINT c_node_name_is_unique IF NOT EXISTS FOR (node:Node) REQUIRE no
 
 {# マスタの代入 #}
 UNWIND $csv_params AS csvParam
-MERGE (n:Node {name: csvParam.name});
+CREATE (n:Node)
+SET n = csvParam;
 
 '
 ,{csv_params: $csv_params}
