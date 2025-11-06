@@ -1,7 +1,6 @@
 CALL apoc.cypher.runMany(
 '
 {# 既存のノードを全て削除 #}
-
 MATCH (n) DETACH DELETE n;
 
 {# 制約の設定 #}
