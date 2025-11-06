@@ -1,8 +1,11 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "worker-lambda"
 version = "0.1.0"
 description = "Add your description here"
-readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.120.4",
@@ -10,6 +13,10 @@ dependencies = [
     "neo4j>=6.0.2",
     "uvicorn>=0.38.0",
 ]
+
+[tool.setuptools]
+package-dir = {"worker_lambda" = "."}
+packages = ["worker_lambda", "worker_lambda.usecase", "worker_lambda.config"]
 
 [tool.pyright]
 typeCheckingMode = "basic"

@@ -1,19 +1,15 @@
-import os 
 import csv
 from pathlib import Path
 from neo4j import GraphDatabase
 from fastapi.templating import Jinja2Templates
+from worker_lambda.config import Settings
 
+BASE_DIR = Path(__file__).parent.parent
+TEMPLATE_DIR = BASE_DIR / "templates"
+templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TEMPLATE_DIR = os.path.join(BASE_DIR, "../templates")
-templates = Jinja2Templates(directory=TEMPLATE_DIR)
-
-STATIC_CSV_DIR = os.getenv("STATIC_CSV_DIR", "../target_dir")
-URI = os.getenv("NEO4J_URI", "neo4j://localhost:7687")
-AUTH = (os.getenv("NEO4J_USER", "neo4j"), os.getenv("NEO4J_PASSWORD", "neo4jpassword"))
-
-DATABASE = "neo4j"
+settings = Settings()
+logger = settings.logger
 
 # ヘルパー：CSV を遅延読み込みしてジェネレータで返す
 def read_relation_csv(csv_dir: str):
@@ -29,10 +25,26 @@ def read_relation_csv(csv_dir: str):
             yield row
 
 def do_init():
-  rows = read_relation_csv(STATIC_CSV_DIR)
-  params_for_apoc = [{"name": row["node"]} for row in rows]
-  init_query = templates.env.get_template("init.cipher").render()
-  
-  with GraphDatabase.driver(URI, auth=AUTH) as driver:
-      with driver.session(database=DATABASE) as session:
-          session.run(init_query, {"csv_params": params_for_apoc})
+    logger.info("Initialization started")
+    csv_dir = Path(settings.STATIC_CSV_DIR)
+    
+    logger.info(f"Reading CSV from: {csv_dir}")
+    rows = list(read_relation_csv(str(csv_dir)))
+    
+    params_for_apoc = [{"name": row["node"]} for row in rows]
+    
+    init_query = templates.env.get_template("init.cipher").render()
+    logger.debug(f"Rendered query: {init_query[:200]}...")
+
+    auth = (settings.NEO4J_USER, settings.NEO4J_PASSWORD)
+    logger.info(f"Connecting to Neo4j at {settings.NEO4J_URI}")
+    
+    with GraphDatabase.driver(settings.NEO4J_URI, auth=auth) as driver:
+        with driver.session(database=settings.DATABASE) as session:
+            logger.info("Executing Neo4j query...")
+            result = session.run(init_query, {"csv_params": params_for_apoc})
+            # クエリ結果を消費（Neo4jのクエリは明示的に結果を消費する必要がある）
+            result_list = list(result)
+            logger.info(f"Query executed successfully. Result count: {len(result_list)}")
+    
+    logger.info("Initialization completed successfully")
