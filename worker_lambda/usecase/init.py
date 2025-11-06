@@ -26,15 +26,12 @@ def read_relation_csv(csv_dir: str):
 
 def do_init():
     logger.info("Initialization started")
-    
     csv_dir = Path(settings.STATIC_CSV_DIR)
     
     logger.info(f"Reading CSV from: {csv_dir}")
     rows = list(read_relation_csv(str(csv_dir)))
-    logger.info(f"Found {len(rows)} rows in CSV")
     
     params_for_apoc = [{"name": row["node"]} for row in rows]
-    logger.info(f"Prepared {len(params_for_apoc)} node parameters: {[p['name'] for p in params_for_apoc]}")
     
     init_query = templates.env.get_template("init.cipher").render()
     logger.debug(f"Rendered query: {init_query[:200]}...")
