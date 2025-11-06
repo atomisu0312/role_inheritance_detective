@@ -1,10 +1,14 @@
 CALL apoc.cypher.runMany(
 '
     MATCH (n) DETACH DELETE n; // 既存のノードを全て削除
+
+    // ユニークキーの設定
+    CREATE CONSTRAINT c_node_name_is_unique FOR (node:Node) REQUIRE node.name IS UNIQUE;
     
     // マスタの代入
     UNWIND $csv_params AS csvParam
-    MERGE (n:Node {name: csvParam.name});
+    CREATE (n:Node)
+    SET n = csvParam;
 '
 ,{csv_params: $csv_params}
 )
