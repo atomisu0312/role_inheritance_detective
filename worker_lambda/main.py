@@ -1,29 +1,21 @@
 from fastapi import FastAPI, HTTPException, Request
 from neo4j import GraphDatabase
 from neo4j.exceptions import ServiceUnavailable, ClientError
-import os
-import logging
 import asyncio
-from usecase.init import do_init
+from worker_lambda.usecase.init import do_init
+from worker_lambda.config import Settings
 
 app = FastAPI()
+settings = Settings()
+logger = settings.logger
 
 # 排他制御用のフラグとロック
 init_in_progress = False
 init_lock = asyncio.Lock()
 
-# ログ設定
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-
 # docker-compose.ymlで環境変数を指定することにより、コンテナ起動、直接起動にかかわらず動くようにする
-URI = os.getenv("NEO4J_URI", "neo4j://localhost:7687")
-AUTH = (os.getenv("NEO4J_USER", "neo4j"), os.getenv("NEO4J_PASSWORD", "neo4jpassword"))
-
-DATABASE = "neo4j"
-STATIC_CSV_DIR = os.getenv("STATIC_CSV_DIR", "../target_dir")
+URI = settings.NEO4J_URI
+AUTH = (settings.NEO4J_USER, settings.NEO4J_PASSWORD)
 
 @app.get("/")
 async def root() -> dict:
