@@ -4,25 +4,50 @@ CALL apoc.cypher.runMany(
 MATCH (n) DETACH DELETE n;
 
 {# 制約の設定 #}
-CREATE CONSTRAINT c_master_name_is_unique IF NOT EXISTS FOR (node:Master) REQUIRE node.name IS UNIQUE;
-CREATE CONSTRAINT c_detail_name_is_unique IF NOT EXISTS FOR (node:Detail) REQUIRE node.name IS UNIQUE;
+CREATE CONSTRAINT c_database_role_name_is_unique IF NOT EXISTS FOR (node:DatabaseRole) REQUIRE node.name IS UNIQUE;
+CREATE CONSTRAINT c_functional_role_name_is_unique IF NOT EXISTS FOR (node:FunctionalRole) REQUIRE node.name IS UNIQUE;
+CREATE CONSTRAINT c_access_role_name_is_unique IF NOT EXISTS FOR (node:AccessRole) REQUIRE node.name IS UNIQUE;
 
-{# マスタの代入 #}
-UNWIND $master_csv_params AS csvParam
-CREATE (n:Master)
+{# データベースロールの代入 #}
+UNWIND $database_role_csv_params AS csvParam
+CREATE (n:DatabaseRole)
 SET n = csvParam;
 
-{# 詳細の代入 #}
-UNWIND $detail_csv_params AS csvParam
-CREATE (n:Detail)
+{# 機能ロールの代入 #}
+UNWIND $functional_role_csv_params AS csvParam
+CREATE (n:FunctionalRole)
 SET n = csvParam;
 
-{# リレーションの代入 #}
-UNWIND range(0, size($relation_csv_params) - 1) AS i
-MERGE (src:Master {name: $relation_csv_params[i].src})
-MERGE (dst:Detail {name: $relation_csv_params[i].dst})
-MERGE (src)-[rel:RELATED_TO]->(dst);
+{# アクセスロールの代入 #}
+UNWIND $access_role_csv_params AS csvParam
+CREATE (n:AccessRole)
+SET n = csvParam;
+
+{# データベースロールの継承の代入 #}
+UNWIND range(0, size($database_role_inheritance_csv_params) - 1) AS i
+MERGE (child:DatabaseRole {name: $database_role_inheritance_csv_params[i].child})
+MERGE (parent:AccessRole {name: $database_role_inheritance_csv_params[i].parent})
+MERGE (parent)-[rel:INHERITS_FROM]->(child);
+
+{# 機能ロールの継承の代入 #}
+UNWIND range(0, size($functional_role_inheritance_csv_params) - 1) AS i
+MERGE (child:FunctionalRole {name: $functional_role_inheritance_csv_params[i].child})
+MERGE (parent:FunctionalRole {name: $functional_role_inheritance_csv_params[i].parent})
+MERGE (parent)-[rel:INHERITS_FROM]->(child);
+
+{# 機能アクセスロールの継承の代入 #}
+UNWIND range(0, size($functional_access_role_inheritance_csv_params) - 1) AS i
+MERGE (child:AccessRole {name: $functional_access_role_inheritance_csv_params[i].child})
+MERGE (parent:FunctionalRole {name: $functional_access_role_inheritance_csv_params[i].parent})
+MERGE (parent)-[rel:INHERITS_FROM]->(child);
+
+{# アクセスロールの継承の代入 #}
+UNWIND range(0, size($access_role_inheritance_csv_params) - 1) AS i
+MERGE (child:AccessRole {name: $access_role_inheritance_csv_params[i].child})
+MERGE (parent:AccessRole {name: $access_role_inheritance_csv_params[i].parent})
+MERGE (parent)-[rel:INHERITS_FROM]->(child);
 
 '
-,{master_csv_params: $master_csv_params, detail_csv_params: $detail_csv_params, relation_csv_params: $relation_csv_params}
+,{database_role_csv_params: $database_role_csv_params, functional_role_csv_params: $functional_role_csv_params, access_role_csv_params: $access_role_csv_params
+,database_role_inheritance_csv_params: $database_role_inheritance_csv_params, functional_role_inheritance_csv_params: $functional_role_inheritance_csv_params, functional_access_role_inheritance_csv_params: $functional_access_role_inheritance_csv_params, access_role_inheritance_csv_params: $access_role_inheritance_csv_params}
 )
