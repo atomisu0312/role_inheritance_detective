@@ -4,13 +4,25 @@ CALL apoc.cypher.runMany(
 MATCH (n) DETACH DELETE n;
 
 {# 制約の設定 #}
-CREATE CONSTRAINT c_node_name_is_unique IF NOT EXISTS FOR (node:Node) REQUIRE node.name IS UNIQUE;
+CREATE CONSTRAINT c_master_name_is_unique IF NOT EXISTS FOR (node:Master) REQUIRE node.name IS UNIQUE;
+CREATE CONSTRAINT c_detail_name_is_unique IF NOT EXISTS FOR (node:Detail) REQUIRE node.name IS UNIQUE;
 
 {# マスタの代入 #}
-UNWIND $csv_params AS csvParam
-CREATE (n:Node)
+UNWIND $master_csv_params AS csvParam
+CREATE (n:Master)
 SET n = csvParam;
 
+{# 詳細の代入 #}
+UNWIND $detail_csv_params AS csvParam
+CREATE (n:Detail)
+SET n = csvParam;
+
+{# リレーションの代入 #}
+UNWIND range(0, size($relation_csv_params) - 1) AS i
+MERGE (src:Master {name: $relation_csv_params[i].src})
+MERGE (dst:Detail {name: $relation_csv_params[i].dst})
+MERGE (src)-[rel:RELATED_TO]->(dst);
+
 '
-,{csv_params: $csv_params}
+,{master_csv_params: $master_csv_params, detail_csv_params: $detail_csv_params, relation_csv_params: $relation_csv_params}
 )
