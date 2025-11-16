@@ -29,13 +29,22 @@ def do_init():
     csv_dir = Path(settings.STATIC_CSV_DIR)
     
     logger.info(f"Reading CSV from: {csv_dir}")
-    master_rows = list(read_csv(str(csv_dir), "master.csv"))
-    detail_rows = list(read_csv(str(csv_dir), "detail.csv"))
-    relation_rows = list(read_csv(str(csv_dir), "relation.csv"))
     
-    master_params_for_apoc = [{"name": row["name"]} for row in master_rows]
-    detail_params_for_apoc = [{"name": row["name"]} for row in detail_rows]
-    relation_params_for_apoc = [{"src": row["src"], "dst": row["dst"]} for row in relation_rows]
+    database_role_rows = list(read_csv(str(csv_dir), "database_role.csv"))
+    access_role_rows = list(read_csv(str(csv_dir), "access_role.csv"))
+    functional_role_rows = list(read_csv(str(csv_dir), "functional_role.csv"))
+    database_role_inheritance_rows = list(read_csv(str(csv_dir), "database_role_inheritance.csv"))
+    functional_role_inheritance_rows = list(read_csv(str(csv_dir), "functional_role_inheritance.csv"))
+    functional_access_role_inheritance_rows = list(read_csv(str(csv_dir), "functional_access_role_inheritance.csv"))
+    access_role_inheritance_rows = list(read_csv(str(csv_dir), "access_role_inheritance.csv"))
+    
+    database_role_params_for_apoc = [{"name": row["name"]} for row in database_role_rows]
+    access_role_params_for_apoc = [{"name": row["name"]} for row in access_role_rows]
+    functional_role_params_for_apoc = [{"name": row["name"]} for row in functional_role_rows]
+    database_role_inheritance_params_for_apoc = [{"child": row["child"], "parent": row["parent"]} for row in database_role_inheritance_rows]
+    functional_role_inheritance_params_for_apoc = [{"child": row["child"], "parent": row["parent"]} for row in functional_role_inheritance_rows]
+    functional_access_role_inheritance_params_for_apoc = [{"child": row["child"], "parent": row["parent"]} for row in functional_access_role_inheritance_rows]
+    access_role_inheritance_params_for_apoc = [{"child": row["child"], "parent": row["parent"]} for row in access_role_inheritance_rows]
     
     init_query = templates.env.get_template("init.cipher").render()
     logger.debug(f"Rendered query: {init_query[:200]}...")
@@ -45,7 +54,9 @@ def do_init():
     with GraphDatabase.driver(settings.NEO4J_URI, auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD)) as driver:
         with driver.session(database=settings.DATABASE) as session:
             logger.info("Executing Neo4j query...")
-            result = session.run(init_query, {"master_csv_params": master_params_for_apoc, "detail_csv_params": detail_params_for_apoc, "relation_csv_params": relation_params_for_apoc})
+            result = session.run(init_query, {"database_role_csv_params": database_role_params_for_apoc, "functional_role_csv_params": functional_role_params_for_apoc, "access_role_csv_params": access_role_params_for_apoc,
+                                            "database_role_inheritance_csv_params": database_role_inheritance_params_for_apoc, "functional_role_inheritance_csv_params": functional_role_inheritance_params_for_apoc,
+                                            "functional_access_role_inheritance_csv_params": functional_access_role_inheritance_params_for_apoc, "access_role_inheritance_csv_params": access_role_inheritance_params_for_apoc})
             # クエリ結果を消費（Neo4jのクエリは明示的に結果を消費する必要がある）
             result_list = list(result)
             logger.info(f"Query executed successfully. Result count: {len(result_list)}")
