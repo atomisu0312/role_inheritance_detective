@@ -9,7 +9,7 @@ class Settings:
     NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
     NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "neo4jpassword")
     DATABASE = "neo4j"
-    STATIC_CSV_DIR = os.getenv("STATIC_CSV_DIR", "../target_dir")
+    STATIC_CSV_DIR = os.getenv("STATIC_CSV_DIR", "../target_dir/params")
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
