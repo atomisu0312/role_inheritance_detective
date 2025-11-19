@@ -7,47 +7,87 @@ MATCH (n) DETACH DELETE n;
 CREATE CONSTRAINT c_database_role_name_is_unique IF NOT EXISTS FOR (node:DatabaseRole) REQUIRE node.name IS UNIQUE;
 CREATE CONSTRAINT c_functional_role_name_is_unique IF NOT EXISTS FOR (node:FunctionalRole) REQUIRE node.name IS UNIQUE;
 CREATE CONSTRAINT c_access_role_name_is_unique IF NOT EXISTS FOR (node:AccessRole) REQUIRE node.name IS UNIQUE;
+CREATE CONSTRAINT c_database_module_id_is_unique IF NOT EXISTS FOR (node:Database) REQUIRE node.module_id IS UNIQUE;
+CREATE CONSTRAINT c_schema_module_id_is_unique IF NOT EXISTS FOR (node:Schema) REQUIRE node.module_id IS UNIQUE;
+
+
+{# データベースの代入 #}
+UNWIND $database_node_params AS nodeParam
+CREATE (n:Database)
+SET n = nodeParam;
+
+{# スキーマの代入 #}
+UNWIND $schema_node_params AS nodeParam
+CREATE (n:Schema)
+SET n = nodeParam;
+
+{# データベースとスキーマのリレーションの代入 #}
+UNWIND $schema_node_params AS nodeParam
+MERGE (database:Database {module_id: nodeParam.database_id})
+MERGE (schema:Schema {module_id: nodeParam.module_id})
+MERGE (database)-[rel:CONTAINS]->(schema);
 
 {# データベースロールの代入 #}
-UNWIND $database_role_csv_params AS csvParam
-CREATE (n:DatabaseRole)
-SET n = csvParam;
+UNWIND $database_read_role_node_params AS nodeParam
+CREATE (n:DatabaseRole:ReadRole)
+SET n = nodeParam;
+
+UNWIND $database_read_write_role_node_params AS nodeParam
+CREATE (n:DatabaseRole:ReadWriteRole)
+SET n = nodeParam;
+
+{# データベースロールとデータベースのリレーションの代入 #}
+UNWIND $database_read_role_node_params AS nodeParam
+UNWIND nodeParam.schema_ids AS schema_id
+MERGE (database_role:DatabaseRole {module_id: nodeParam.module_id})
+MERGE (database:Database {module_id: nodeParam.database_id})
+MERGE (schema:Schema {module_id: schema_id})
+MERGE (database_role)-[rel1:TARGETS]->(database)
+MERGE (database_role)-[rel2:TARGETS]->(schema);
+
+UNWIND $database_read_write_role_node_params AS nodeParam
+UNWIND nodeParam.schema_ids AS schema_id
+MERGE (database_role:DatabaseRole {module_id: nodeParam.module_id})
+MERGE (database:Database {module_id: nodeParam.database_id})
+MERGE (schema:Schema {module_id: schema_id})
+MERGE (database_role)-[rel1:TARGETS]->(database)
+MERGE (database_role)-[rel2:TARGETS]->(schema);
 
 {# 機能ロールの代入 #}
-UNWIND $functional_role_csv_params AS csvParam
+UNWIND $functional_role_node_params AS nodeParam
 CREATE (n:FunctionalRole)
-SET n = csvParam;
+SET n = nodeParam;
 
 {# アクセスロールの代入 #}
-UNWIND $access_role_csv_params AS csvParam
+UNWIND $access_role_node_params AS nodeParam
 CREATE (n:AccessRole)
-SET n = csvParam;
+SET n = nodeParam;
 
 {# データベースロールの継承の代入 #}
-UNWIND range(0, size($database_role_inheritance_csv_params) - 1) AS i
-MERGE (child:DatabaseRole {name: $database_role_inheritance_csv_params[i].child})
-MERGE (parent:AccessRole {name: $database_role_inheritance_csv_params[i].parent})
+UNWIND range(0, size($database_role_inheritance_node_params) - 1) AS i
+MERGE (child:DatabaseRole {name: $database_role_inheritance_node_params[i].child})
+MERGE (parent:AccessRole {name: $database_role_inheritance_node_params[i].parent})
 MERGE (parent)-[rel:INHERITS_FROM]->(child);
 
 {# 機能ロールの継承の代入 #}
-UNWIND range(0, size($functional_role_inheritance_csv_params) - 1) AS i
-MERGE (child:FunctionalRole {name: $functional_role_inheritance_csv_params[i].child})
-MERGE (parent:FunctionalRole {name: $functional_role_inheritance_csv_params[i].parent})
+UNWIND range(0, size($functional_role_inheritance_node_params) - 1) AS i
+MERGE (child:FunctionalRole {name: $functional_role_inheritance_node_params[i].child})
+MERGE (parent:FunctionalRole {name: $functional_role_inheritance_node_params[i].parent})
 MERGE (parent)-[rel:INHERITS_FROM]->(child);
 
 {# 機能アクセスロールの継承の代入 #}
-UNWIND range(0, size($functional_access_role_inheritance_csv_params) - 1) AS i
-MERGE (child:AccessRole {name: $functional_access_role_inheritance_csv_params[i].child})
-MERGE (parent:FunctionalRole {name: $functional_access_role_inheritance_csv_params[i].parent})
+UNWIND range(0, size($functional_access_role_inheritance_node_params) - 1) AS i
+MERGE (child:AccessRole {name: $functional_access_role_inheritance_node_params[i].child})
+MERGE (parent:FunctionalRole {name: $functional_access_role_inheritance_node_params[i].parent})
 MERGE (parent)-[rel:INHERITS_FROM]->(child);
 
 {# アクセスロールの継承の代入 #}
-UNWIND range(0, size($access_role_inheritance_csv_params) - 1) AS i
-MERGE (child:AccessRole {name: $access_role_inheritance_csv_params[i].child})
-MERGE (parent:AccessRole {name: $access_role_inheritance_csv_params[i].parent})
+UNWIND range(0, size($access_role_inheritance_node_params) - 1) AS i
+MERGE (child:AccessRole {name: $access_role_inheritance_node_params[i].child})
+MERGE (parent:AccessRole {name: $access_role_inheritance_node_params[i].parent})
 MERGE (parent)-[rel:INHERITS_FROM]->(child);
 
 '
-,{database_role_csv_params: $database_role_csv_params, functional_role_csv_params: $functional_role_csv_params, access_role_csv_params: $access_role_csv_params
-,database_role_inheritance_csv_params: $database_role_inheritance_csv_params, functional_role_inheritance_csv_params: $functional_role_inheritance_csv_params, functional_access_role_inheritance_csv_params: $functional_access_role_inheritance_csv_params, access_role_inheritance_csv_params: $access_role_inheritance_csv_params}
+,{database_read_role_node_params: $database_read_role_node_params, database_read_write_role_node_params: $database_read_write_role_node_params, functional_role_node_params: $functional_role_node_params, access_role_node_params: $access_role_node_params, database_node_params: $database_node_params, schema_node_params: $schema_node_params
+,database_role_inheritance_node_params: $database_role_inheritance_node_params, functional_role_inheritance_node_params: $functional_role_inheritance_node_params, functional_access_role_inheritance_node_params: $functional_access_role_inheritance_node_params, access_role_inheritance_node_params: $access_role_inheritance_node_params}
 )

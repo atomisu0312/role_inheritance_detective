@@ -36,3 +36,14 @@ def process_upper_template(input_str, variables):
     final_result = processed_content.upper()
     
     return final_result
+
+def extract_resource_key(text: str) -> str:
+    # 1. 外側の "${" と "}" を除去
+    # Python 3.9未満の場合は text[2:-1] を使用してください
+    content = text.removeprefix("${").removesuffix("}")
+    
+    # 2. 右から最初の "." で分割し、左側の部分を取得
+    # これにより "key" などのキー部分を切り捨てます
+    key_part, _ = content.rsplit('.', 1)
+    
+    return key_part
