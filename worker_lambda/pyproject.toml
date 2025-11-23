@@ -11,6 +11,7 @@ dependencies = [
     "fastapi>=0.120.4",
     "jinja2>=3.1.6",
     "neo4j>=6.0.2",
+    "python-hcl2>=7.3.1",
     "uvicorn>=0.38.0",
 ]
 
