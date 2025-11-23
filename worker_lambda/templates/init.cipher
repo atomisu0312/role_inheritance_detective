@@ -13,12 +13,12 @@ CREATE CONSTRAINT c_schema_module_id_is_unique IF NOT EXISTS FOR (node:Schema) R
 
 {# データベースの代入 #}
 UNWIND $database_node_params AS nodeParam
-CREATE (n:Database)
+CREATE (n:Database:DatabaseObject)
 SET n = nodeParam;
 
 {# スキーマの代入 #}
 UNWIND $schema_node_params AS nodeParam
-CREATE (n:Schema)
+CREATE (n:Schema:DatabaseObject)
 SET n = nodeParam;
 
 {# データベースとスキーマのリレーションの代入 #}
@@ -42,16 +42,16 @@ UNWIND nodeParam.schema_ids AS schema_id
 MERGE (database_role:DatabaseRole {module_id: nodeParam.module_id})
 MERGE (database:Database {module_id: nodeParam.database_id})
 MERGE (schema:Schema {module_id: schema_id})
-MERGE (database_role)-[rel1:TARGETS]->(database)
-MERGE (database_role)-[rel2:TARGETS]->(schema);
+MERGE (database_role)-[rel1:TARGETS_DATABASE]->(database)
+MERGE (database_role)-[rel2:TARGETS_SCHEMA]->(schema);
 
 UNWIND $database_read_write_role_node_params AS nodeParam
 UNWIND nodeParam.schema_ids AS schema_id
 MERGE (database_role:DatabaseRole {module_id: nodeParam.module_id})
 MERGE (database:Database {module_id: nodeParam.database_id})
 MERGE (schema:Schema {module_id: schema_id})
-MERGE (database_role)-[rel1:TARGETS]->(database)
-MERGE (database_role)-[rel2:TARGETS]->(schema);
+MERGE (database_role)-[rel1:TARGETS_DATABASE]->(database)
+MERGE (database_role)-[rel2:TARGETS_SCHEMA]->(schema);
 
 {# 機能ロールの代入 #}
 UNWIND $functional_role_node_params AS nodeParam
