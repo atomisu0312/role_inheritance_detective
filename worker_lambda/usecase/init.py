@@ -113,6 +113,27 @@ def do_init():
     csv_dir = Path(settings.STATIC_CSV_DIR)
     hcl2_dir = Path(settings.STATIC_HCL_DIR)
 
+    # Define privilege and environment lists
+    PRIV_LIST_RW_ROLE_ON_DATABASE = ["USAGE ON DATABASE"]
+    PRIV_LIST_R_ROLE_ON_DATABASE = ["USAGE ON DATABASE"]
+    PRIV_LIST_RW_ROLE_ON_SCHEMA = [
+        "USAGE ON SCHEMA",
+        "CREATE TABLE ON SCHEMA",
+        "CREATE VIEW ON SCHEMA",
+        "INSERT ON TABLES",
+        "UPDATE ON TABLES",
+        "TRUNCATE ON TABLES",
+        "DELETE ON TABLES",
+    ]
+    PRIV_LIST_R_ROLE_ON_SCHEMA = [
+        "USAGE ON SCHEMA",
+        "SELECT ON TABLES",
+        "SELECT ON VIEWS",
+        "USAGE ON STAGES",
+        "USAGE ON FILE FORMATS",
+    ]
+    ENV_LIST = ["dev", "stg", "prod"]
+
     logger.info(f"Reading CSV from: {csv_dir}")
     logger.info(f"Reading HCL2 from: {hcl2_dir}")
 
@@ -225,6 +246,11 @@ def do_init():
                     "access_role_inheritance_node_params": access_role_inheritance_params_for_apoc,
                     "database_node_params": database_params_for_apoc,
                     "schema_node_params": schema_params_for_apoc,
+                    "priv_list_rw_role_on_database": PRIV_LIST_RW_ROLE_ON_DATABASE,
+                    "priv_list_r_role_on_database": PRIV_LIST_R_ROLE_ON_DATABASE,
+                    "priv_list_rw_role_on_schema": PRIV_LIST_RW_ROLE_ON_SCHEMA,
+                    "priv_list_r_role_on_schema": PRIV_LIST_R_ROLE_ON_SCHEMA,
+                    "env_list": ENV_LIST,
                 },
             )
             # クエリ結果を消費（Neo4jのクエリは明示的に結果を消費する必要がある）

@@ -53,6 +53,45 @@ MERGE (schema:Schema {module_id: schema_id})
 MERGE (database_role)-[rel1:TARGETS_DATABASE]->(database)
 MERGE (database_role)-[rel2:TARGETS_SCHEMA]->(schema);
 
+{# 権限の定義 #}
+{# RW_ROLE on DATABASE #}
+UNWIND $env_list AS env
+MATCH (wrRole:ReadWriteRole {env: env}) -[rel1:TARGETS_DATABASE]->(database: DatabaseObject {env: env})
+UNWIND $priv_list_rw_role_on_database AS privType
+MERGE (p:Privilege {target: database.name, priv_type: privType, name: privType, env: env})
+MERGE (wrRole)-[:HAS_PRIVILEGE]->(p)
+MERGE (p)-[:GRANTED_ON]->(database);
+
+{# R_ROLE on DATABASE #}
+UNWIND $env_list AS env
+MATCH (rRole:ReadRole {env: env}) -[rel1:TARGETS_DATABASE]->(database: DatabaseObject {env: env})
+UNWIND $priv_list_r_role_on_database AS privType
+MERGE (p:Privilege {target: database.name, priv_type: privType, name: privType, env: env})
+MERGE (rRole)-[:HAS_PRIVILEGE]->(p)
+MERGE (p)-[:GRANTED_ON]->(database);
+
+{# RW_ROLE on SCHEMA #}
+UNWIND $env_list AS env
+MATCH (wrRole:ReadWriteRole {env: env}) -[rel2:TARGETS_SCHEMA]->(schema: DatabaseObject {env: env})
+UNWIND $priv_list_rw_role_on_schema AS privType
+MERGE (p:Privilege {target: schema.name, priv_type: privType, name: privType, env: env})
+MERGE (wrRole)-[:HAS_PRIVILEGE]->(p)
+MERGE (p)-[:GRANTED_ON]->(schema);
+
+{# R_ROLE on SCHEMA #}
+UNWIND $env_list AS env
+MATCH (rRole:ReadRole {env: env}) -[rel2:TARGETS_SCHEMA]->(schema: DatabaseObject {env: env})
+UNWIND $priv_list_r_role_on_schema AS privType
+MERGE (p:Privilege {target: schema.name, priv_type: privType, name: privType, env: env})
+MERGE (rRole)-[:HAS_PRIVILEGE]->(p)
+MERGE (p)-[:GRANTED_ON]->(schema);
+
+{# 不要になったリレーションの削除#}
+MATCH (role:DatabaseRole)-[r:TARGETS_DATABASE]->(obj:Database)
+DELETE r;
+MATCH (role:DatabaseRole)-[r:TARGETS_SCHEMA]->(obj:Schema)
+DELETE r;
+
 {# 機能ロールの代入 #}
 UNWIND $functional_role_node_params AS nodeParam
 CREATE (n:FunctionalRole)
@@ -88,6 +127,21 @@ MERGE (parent:AccessRole {name: $access_role_inheritance_node_params[i].parent})
 MERGE (parent)-[rel:INHERITS_FROM]->(child);
 
 '
-,{database_read_role_node_params: $database_read_role_node_params, database_read_write_role_node_params: $database_read_write_role_node_params, functional_role_node_params: $functional_role_node_params, access_role_node_params: $access_role_node_params, database_node_params: $database_node_params, schema_node_params: $schema_node_params
-,database_role_inheritance_node_params: $database_role_inheritance_node_params, functional_role_inheritance_node_params: $functional_role_inheritance_node_params, functional_access_role_inheritance_node_params: $functional_access_role_inheritance_node_params, access_role_inheritance_node_params: $access_role_inheritance_node_params}
+,{database_read_role_node_params: $database_read_role_node_params,
+  database_read_write_role_node_params: $database_read_write_role_node_params,
+  functional_role_node_params: $functional_role_node_params,
+  access_role_node_params: $access_role_node_params,
+  database_node_params: $database_node_params,
+  schema_node_params: $schema_node_params,
+  database_role_inheritance_node_params: $database_role_inheritance_node_params,
+  functional_role_inheritance_node_params: $functional_role_inheritance_node_params,
+  functional_access_role_inheritance_node_params: $functional_access_role_inheritance_node_params,
+  access_role_inheritance_node_params: $access_role_inheritance_node_params,
+
+  priv_list_rw_role_on_database: $priv_list_rw_role_on_database,
+  priv_list_r_role_on_database: $priv_list_r_role_on_database,
+  priv_list_rw_role_on_schema: $priv_list_rw_role_on_schema,
+  priv_list_r_role_on_schema: $priv_list_r_role_on_schema,
+  env_list: $env_list
+}
 )
