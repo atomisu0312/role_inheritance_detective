@@ -10,7 +10,7 @@ class Settings:
     NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "neo4jpassword")
     DATABASE = "neo4j"
     STATIC_CSV_DIR = os.getenv("STATIC_CSV_DIR", "../target_dir/params")
-    STATIC_HCL_DIR = os.getenv("STATIC_HCL_DIR", "../target_dir/infra")
+    STATIC_HCL_DIR = os.getenv("STATIC_HCL_DIR", "../target_dir/terraform")
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
