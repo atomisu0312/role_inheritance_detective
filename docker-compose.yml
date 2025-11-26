@@ -28,10 +28,12 @@ services:
       - NEO4J_USER=neo4j
       - NEO4J_PASSWORD=neo4jpassword
       - STATIC_CSV_DIR=./static/target/params
+      - STATIC_HCL_DIR=./static/target/terraform
     ports:
       - 10000:8080
     volumes:
       - ./target_dir/params:/app/static/target/params
+      - ./target_dir/terraform:/app/static/target/terraform
     networks:
       - mynetwork
     healthcheck:
